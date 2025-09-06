@@ -89,6 +89,78 @@ Set-ADForestMode -Identity "emijua.local" -ForestMode Windows2012R2
 whoami /groups | findstr "Schema Admins"
 whoami /groups | findstr "Enterprise Admins"
 
+|------------------------------------|
+| 𝓒𝓸𝓷𝓯𝓲𝓰𝓾𝓻𝓪𝓬𝓲𝓸𝓷 𝓹𝓸𝓼𝓽 𝓲𝓷𝓼𝓽𝓪𝓵𝓪𝓬𝓲𝓹𝓷 |
+|------------------------------------|
+
+__ Configuracion de certificados SSL
+# Crear certificado para tu dominio
+New-ExchangeCertificate -GenerateRequest -SubjectName "CN=mail.emijua.local" -DomainName mail.emijua.local,autodiscover.emijua.local -PrivateKeyExportable $true
+
+# Asignar servicios al certificado
+Enable-ExchangeCertificate -Thumbprint "TU_THUMBPRINT" -Services IIS,SMTP
+
+__ URLs de acceso
+# Configurar URLs para tu dominio
+Set-ClientAccessService -Identity "$env:COMPUTERNAME" -AutodiscoverServiceInternalUri "https://mail.emijua.local/autodiscover/autodiscover.xml"
+
+Set-OABVirtualDirectory -Identity "$env:COMPUTERNAME\OAB (Default Web Site)" -InternalUrl "https://mail.emijua.local/OAB" -ExternalUrl "https://mail.emijua.local/OAB"
+
+Set-WebServicesVirtualDirectory -Identity "$env:COMPUTERNAME\EWS (Default Web Site)" -InternalUrl "https://mail.emijua.local/EWS/Exchange.asmx" -ExternalUrl "https://mail.emijua.local/EWS/Exchange.asmx"
+
+Set-ECPVirtualDirectory -Identity "$env:COMPUTERNAME\ECP (Default Web Site)" -InternalUrl "https://mail.emijua.local/ECP" -ExternalUrl "https://mail.emijua.local/ECP"
+
+Set-OwaVirtualDirectory -Identity "$env:COMPUTERNAME\OWA (Default Web Site)" -InternalUrl "https://mail.emijua.local/OWA" -ExternalUrl "https://mail.emijua.local/OWA"
+
+__ Creacion de BD de correo
+# Crear base de datos principal
+New-MailboxDatabase -Name "MBX-EMIJUA" -Server "$env:COMPUTERNAME" -EdbFilePath "C:\Exchange\MBX-EMIJUA\MBX-EMIJUA.edb" -LogFolderPath "C:\Exchange\MBX-EMIJUA\Logs"
+
+# Montar base de datos
+Mount-Database -Identity "MBX-EMIJUA"
+
+# Establecer como base de datos por defecto
+Set-MailboxDatabase "MBX-EMIJUA" -IsExcludedFromProvisioning $false
+
+__ Crear buzoines de usuario
+# Habilitar buzón para el usuario administrador existente
+Enable-Mailbox -Identity "Administrador" -Alias "administrador" -Database "MBX-EMIJUA"
+
+# Crear usuario de prueba
+New-Mailbox -UserPrincipalName "usuario@emijua.local" -Alias "usuario" -Database "MBX-EMIJUA" -Password (ConvertTo-SecureString "Password123!" -AsPlainText -Force) -FirstName "Usuario" -LastName "Prueba"
+
+# Verificar buzones creados
+Get-Mailbox -Database "MBX-EMIJUA" | Select-Object Name, UserPrincipalName, Database
+
+_ Configuracion de Send Connector
+# Crear conector para enviar correos
+New-SendConnector -Name "Internet Send Connector" -AddressSpaces * -Usage Internet -DNSRoutingEnabled $true -SourceTransportServers "$env:COMPUTERNAME"
+
+# Verificar conectores
+Get-SendConnector | Select-Object Name, AddressSpaces, Enabled
+
+__ DNS en Active Directory
+# Agregar records DNS en tu DC (desde el servidor DNS)
+Add-DnsServerResourceRecordA -Name "mail" -ZoneName "emijua.local" -IPv4Address "192.168.247.131"
+
+Add-DnsServerResourceRecordCName -Name "autodiscover" -HostNameAlias "mail.emijua.local" -ZoneName "emijua.local"
+
+Add-DnsServerResourceRecordMX -Name "@" -MailExchange "mail.emijua.local" -ZoneName "emijua.local" -Preference 10
+
+__ Configuracion de Firewall
+# Abrir puertos necesarios
+$ports = @(25, 80, 443, 993, 995, 143, 110)
+foreach ($port in $ports) {
+    New-NetFirewallRule -DisplayName "Exchange Port $port" -Direction Inbound -LocalPort $port -Protocol TCP -Action Allow
+}
+
+__ Creacion de usuario
+# Crear usuario NUEVO con buzón de correo
+New-Mailbox -UserPrincipalName "nuevo.usuario@emijua.local" -Alias "nuevo.usuario" -Database "MBX-EMIJUA" -Password (ConvertTo-SecureString "Password123!" -AsPlainText -Force) -FirstName "Nuevo" -LastName "Usuario" -DisplayName "Nuevo Usuario"
+
+# Verificar que se creó
+Get-Mailbox -Identity "nuevo.usuario@emijua.local" | Select-Object Name, UserPrincipalName, Database
+
 |-----------------------|
 | 𝓔𝓷𝓵𝓪𝓬𝓮𝓼 𝓭𝓮 𝓭𝓮𝓼𝓬𝓪𝓻𝓰𝓪 |
 |-----------------------|
