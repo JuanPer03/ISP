@@ -1,0 +1,100 @@
+|-------------------|
+| 𝓟𝓻𝓮  𝓡𝓮𝓺𝓾𝓲𝓼𝓲𝓽𝓸𝓼 |
+|-------------------|
+
+# Link de descarga de archivos requeridos para la preparacion del sistema operativo
+
+https://www.dropbox.com/scl/fi/za74uo6exqqgezhzbsicv/ISProy1.zip?rlkey=5diryd98qmxyp9089x9yy429d&st=mkefd6yr&dl=0
+
+|---------------------------------------|
+| 𝓟𝓻𝓮𝓹𝓪𝓻𝓪𝓬𝓸𝓷 𝓭𝓮𝓵 𝓼𝓲𝓼𝓽𝓮𝓶𝓪 𝓸𝓹𝓮𝓻𝓪𝓽𝓲𝓿𝓸 |
+|---------------------------------------|
+
+# Colocar comando por comando dentro de PowerShell desde la carpeta raiz C:
+
+#Instalacion de roles y caracteristicas nequeridos
+Install-WindowsFeature RSAT-ADDS
+Install-WindowsFeature NET-Framework-45-Features
+Install-WindowsFeature RPC-over-HTTP-proxy
+Install-WindowsFeature RSAT-Clustering
+Install-WindowsFeature WAS-Process-Model
+Install-WindowsFeature Web-Asp-Net45
+Install-WindowsFeature Web-Basic-Auth
+Install-WindowsFeature Web-Client-Auth
+Install-WindowsFeature Web-Digest-Auth
+Install-WindowsFeature Web-Dir-Browsing
+Install-WindowsFeature Web-Dyn-Compression
+Install-WindowsFeature Web-Http-Errors
+Install-WindowsFeature Web-Http-Logging
+Install-WindowsFeature Web-Http-Redirect
+Install-WindowsFeature Web-Http-Tracing
+Install-WindowsFeature Web-ISAPI-Ext
+Install-WindowsFeature Web-ISAPI-Filter
+Install-WindowsFeature Web-Lgcy-Mgmt-Console
+Install-WindowsFeature Web-Metabase
+Install-WindowsFeature Web-Mgmt-Console
+Install-WindowsFeature Web-Mgmt-Service
+Install-WindowsFeature Web-Net-Ext45
+Install-WindowsFeature Web-Request-Monitor
+Install-WindowsFeature Web-Server
+Install-WindowsFeature Web-Stat-Compression
+Install-WindowsFeature Web-Static-Content
+Install-WindowsFeature Web-Windows-Auth
+Install-WindowsFeature Web-WMI
+
+# Instalar componentes de Windows
+Install-WindowsFeature RSAT-Clustering-CmdInterface
+
+# Instalar características web requeridas
+Install-WindowsFeature NET-Framework-45-Features, Web-Server, Web-Mgmt-Console, WAS-Process-Model
+
+# Instalar UCMA 4.0
+Start-Process -FilePath "C:\ISProy1\UcmaRuntimeSetup.exe" -ArgumentList "/quiet" -Wait
+
+# Instalar VC++ 2013
+Start-Process -FilePath "C:\ISProy1\vcredist_x64.exe" -ArgumentList "/quiet /norestart" -Wait
+
+# Instalar URL Rewrite Module
+Start-Process -FilePath "C:\ISProy1\rewrite_amd64.msi" -ArgumentList "/quiet /norestart" -Wait
+
+|--------------------------------|
+| 𝓒𝓻𝓮𝓪𝓬𝓲𝓸𝓷 𝓭𝓮 𝓷𝓾𝓮𝓿𝓸 𝓭𝓸𝓶𝓲𝓷𝓲𝓸 |
+|--------------------------------|
+
+# Colocar comando por comando dentro de PowerShell desde la carpeta raiz C:
+
+# Instalar Active Directory Domain Services
+Install-WindowsFeature AD-Domain-Services -IncludeManagementTools
+
+# Promover a Controlador de Dominio (Crear nuevo bosque)
+Install-ADDSForest -DomainName "emijua.local" -InstallDNS -SafeModeAdministratorPassword (ConvertTo-SecureString "IntSerProy1" -AsPlainText -Force) -Force
+
+# Después del reinicio, verificar si el servidor esta dentro del domnio
+(Get-ComputerInfo).CsDomain
+
+# Si no aparece el nombre del dominio declarado anteriormente, ejecutar el cambio de dominio
+Add-Computer -DomainName "emijua.local" -Restart
+
+# Verificar nivel funcional del bosque
+Get-ADForest | Select-Object Name, ForestMode
+
+# Si el nivel no es al menos Windows2012R2, elevarlo:
+Set-ADForestMode -Identity "emijua.local" -ForestMode Windows2012R2
+
+# Verificar Permisos de Usuario, debes estar logueado con una cuenta que sea miembro de:
+# - Schema Admins
+# - Enterprise Admins
+# - Domain Admins
+
+whoami /groups | findstr "Schema Admins"
+whoami /groups | findstr "Enterprise Admins"
+
+|-----------------------|
+| 𝓔𝓷𝓵𝓪𝓬𝓮𝓼 𝓭𝓮 𝓭𝓮𝓼𝓬𝓪𝓻𝓰𝓪 |
+|-----------------------|
+
+# ISO de Windows Server 2022 (Para el proyecto se hace uso de la versión en español)
+https://www.microsoft.com/es-es/evalcenter/download-windows-server-2022
+
+# ISO de Exchange Server (Para el proyecto se hace uso de la versión 2019 CU15 (2025H1))
+https://learn.microsoft.com/es-es/exchange/plan-and-deploy/supportability-matrix
