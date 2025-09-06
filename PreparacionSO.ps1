@@ -111,3 +111,8 @@ foreach ($program in $programs) {
 
 Write-Host "Proceso completado!" -ForegroundColor Green
 Write-Host "Reinicia el sistema para completar la instalación de algunas características." -ForegroundColor Yellow
+
+# Solicitar presionar Enter para finalizar
+Write-Host ""
+Write-Host "Presiona Enter para finalizar..." -ForegroundColor White -BackgroundColor DarkBlue
+Read-Host
