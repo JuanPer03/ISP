@@ -1,3 +1,4 @@
+https://fiunamedu-my.sharepoint.com/:u:/g/personal/juan_peralta_fi_unam_edu/EVvDiJ3vYEhKpTzUDqUtIMIBJJ84ggIZwDCUaF9AoEK_Cw?e=YwiqY6
 # Cambiar al directorio raíz
 cd \
 
