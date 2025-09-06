@@ -1,70 +1,86 @@
 # Cambiar al directorio raíz
 cd \
 
-# Descargar el archivo zip
-$url = "https://fiunamedu-my.sharepoint.com/:u:/g/personal/juan_peralta_fi_unam_edu/Ec24uBPkqO5BqPVSBQbM_B4BJFmqWXLvpHC9XY_qu_ymsA?e=9z11eu"
-$zipFile = "C:\TempProy1.zip"
-Write-Host "Descargando archivo zip..." -ForegroundColor Yellow
-try {
-    Invoke-WebRequest -Uri $url -OutFile $zipFile -ErrorAction Stop
-    Write-Host "Descarga completada exitosamente" -ForegroundColor Green
-}
-catch {
-    Write-Host "Error en la descarga: $($_.Exception.Message)" -ForegroundColor Red
-    Write-Host "Presiona Enter para salir..." -ForegroundColor Red
-    Read-Host
-    exit 1
-}
+# Descargar carpeta desde OneDrive
+$url = "https://fiunamedu-my.sharepoint.com/:f:/g/personal/juan_peralta_fi_unam_edu/EvV08SgL45NHrQBoMik2WQoBNpuoscRq9cgd1fG7jBzbeQ?e=k3vfI2"
+$destination = "C:\TempProy1"
 
-# Verificar si el archivo se descargó correctamente
-if (Test-Path $zipFile) {
-    Write-Host "Archivo descargado verificado: $zipFile" -ForegroundColor Green
-} else {
-    Write-Host "Error: El archivo no se descargó correctamente" -ForegroundColor Red
-    Write-Host "Presiona Enter para salir..." -ForegroundColor Red
-    Read-Host
-    exit 1
-}
+Write-Host "Descargando carpeta desde OneDrive..." -ForegroundColor Yellow
 
-# Verificar si .NET Framework 4.5 o superior está instalado para la descompresión
-Write-Host "Verificando .NET Framework 4.5+..." -ForegroundColor Yellow
 try {
-    $netRelease = Get-ItemPropertyValue "HKLM:SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full" -Name Release -ErrorAction Stop
-    $net45Installed = $netRelease -ge 378389
-    $net48Installed = $netRelease -ge 528040
-    
-    if (-not ($net45Installed -or $net48Installed)) {
-        Write-Host "ERROR: Se requiere .NET Framework 4.5 o superior para descomprimir" -ForegroundColor Red
-        Write-Host "Release actual: $netRelease" -ForegroundColor Yellow
-        Write-Host "Presiona Enter para salir..." -ForegroundColor Red
-        Read-Host
-        exit 1
+    # Crear directorio destino si no existe
+    if (-not (Test-Path $destination)) {
+        New-Item -ItemType Directory -Path $destination -Force | Out-Null
     }
-    Write-Host ".NET Framework compatible detectado (Release: $netRelease)" -ForegroundColor Green
+    
+    # Método alternativo para descargar contenido de SharePoint/OneDrive
+    # Usando web client para manejar la descarga
+    $webClient = New-Object System.Net.WebClient
+    
+    # Lista de archivos esperados en la carpeta
+    $filesToDownload = @(
+        "Programas/UcmaRuntimeSetup.exe",
+        "Programas/vcredist_x64.exe", 
+        "Programas/rewrite_amd64.msi"
+    )
+    
+    foreach ($file in $filesToDownload) {
+        $filePath = Join-Path $destination $file
+        $fileDir = Split-Path $filePath -Parent
+        
+        # Crear directorio si no existe
+        if (-not (Test-Path $fileDir)) {
+            New-Item -ItemType Directory -Path $fileDir -Force | Out-Null
+        }
+        
+        # Construir URL de descarga (aproximación - puede necesitar ajustes)
+        $downloadUrl = $url -replace '\?e=.*$', "" + "/" + $file
+        Write-Host "Descargando: $file" -ForegroundColor Cyan
+        
+        try {
+            $webClient.DownloadFile($downloadUrl, $filePath)
+            Write-Host "  ✓ $file descargado correctamente" -ForegroundColor Green
+        }
+        catch {
+            Write-Host "  ⚠ No se pudo descargar $file : $($_.Exception.Message)" -ForegroundColor Yellow
+        }
+    }
+    
+    Write-Host "Descarga de archivos completada" -ForegroundColor Green
 }
 catch {
-    Write-Host "ERROR: No se pudo verificar .NET Framework: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "ERROR en la descarga: $($_.Exception.Message)" -ForegroundColor Red
     Write-Host "Presiona Enter para salir..." -ForegroundColor Red
     Read-Host
     exit 1
 }
 
-# Descomprimir el archivo zip
-Write-Host "Descomprimiendo archivo..." -ForegroundColor Yellow
-try {
-    Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction Stop
-    [System.IO.Compression.ZipFile]::ExtractToDirectory($zipFile, "C:\")
-    Write-Host "Descompresión completada exitosamente" -ForegroundColor Green
-}
-catch {
-    Write-Host "ERROR al descomprimir: $($_.Exception.Message)" -ForegroundColor Red
-    Write-Host "Presiona Enter para salir..." -ForegroundColor Red
-    Read-Host
-    exit 1
+# Verificar si los archivos esenciales se descargaron
+$essentialFiles = @(
+    "C:\TempProy1\Programas\UcmaRuntimeSetup.exe",
+    "C:\TempProy1\Programas\vcredist_x64.exe",
+    "C:\TempProy1\Programas\rewrite_amd64.msi"
+)
+
+$missingFiles = @()
+foreach ($file in $essentialFiles) {
+    if (-not (Test-Path $file)) {
+        $missingFiles += $file
+        Write-Host "ADVERTENCIA: Archivo no encontrado - $file" -ForegroundColor Yellow
+    }
 }
 
-# Pausa después de descompresión
-Write-Host "Descompresión completada. Presiona Enter para continuar con las instalaciones..." -ForegroundColor Cyan
+if ($missingFiles.Count -gt 0) {
+    Write-Host "Algunos archivos esenciales no se descargaron correctamente." -ForegroundColor Yellow
+    Write-Host "Por favor, descarga manualmente la carpeta desde:" -ForegroundColor Yellow
+    Write-Host $url -ForegroundColor Cyan
+    Write-Host "Y colócala en C:\TempProy1" -ForegroundColor Yellow
+    Write-Host "Presiona Enter para continuar con la instalación de características..." -ForegroundColor Yellow
+    Read-Host
+}
+
+# Pausa después de descarga
+Write-Host "Descarga completada. Presiona Enter para continuar con las instalaciones..." -ForegroundColor Cyan
 Read-Host
 
 # Cambiar al directorio TempProy1
@@ -120,7 +136,7 @@ foreach ($feature in $features) {
     }
 }
 
-# Instalar programas adicionales
+# Instalar programas adicionales (si se descargaron)
 Write-Host "Instalando programas adicionales..." -ForegroundColor Yellow
 
 $programs = @(
