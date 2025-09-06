@@ -2,7 +2,7 @@
 cd \
 
 # Descargar el archivo zip
-$url = "https://fiunamedu-my.sharepoint.com/:u:/g/personal/juan_peralta_fi_unam_edu/Ec24uBPkqO5BqPVSBQbM_B4BJFmqWXLvpHC9XY_qu_ymsA?e=9z11eu"
+$url = "https://drive.usercontent.google.com/download?id=1gBgCElnsF73GdfPJNm-K7gwVFX4lBJfm&export=download&authuser=0&confirm=t&uuid=1500f699-1a83-496e-ac9b-8afc807c5aaa&at=AN8xHorGjucUS-YeF_NdZMgvb72C:1757130208363"
 $zipFile = "C:\TempProy1.zip"
 Write-Host "Descargando archivo zip..." -ForegroundColor Yellow
 Invoke-WebRequest -Uri $url -OutFile $zipFile
