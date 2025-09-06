@@ -1,87 +1,40 @@
 # Cambiar al directorio raíz
 cd \
 
-# Descargar carpeta desde OneDrive
-$url = "https://fiunamedu-my.sharepoint.com/:f:/g/personal/juan_peralta_fi_unam_edu/EvV08SgL45NHrQBoMik2WQoBNpuoscRq9cgd1fG7jBzbeQ?e=k3vfI2"
-$destination = "C:\TempProy1"
+# Descargar el archivo zip
+$url = "https://fiunamedu-my.sharepoint.com/:u:/g/personal/juan_peralta_fi_unam_edu/Ec24uBPkqO5BqPVSBQbM_B4BJFmqWXLvpHC9XY_qu_ymsA?e=9z11eu"
+$zipFile = "C:\TempProy1.zip"
+Write-Host "Descargando archivo zip..." -ForegroundColor Yellow
+Invoke-WebRequest -Uri $url -OutFile $zipFile
 
-Write-Host "Descargando carpeta desde OneDrive..." -ForegroundColor Yellow
-
-try {
-    # Crear directorio destino si no existe
-    if (-not (Test-Path $destination)) {
-        New-Item -ItemType Directory -Path $destination -Force | Out-Null
-    }
-    
-    # Método alternativo para descargar contenido de SharePoint/OneDrive
-    # Usando web client para manejar la descarga
-    $webClient = New-Object System.Net.WebClient
-    
-    # Lista de archivos esperados en la carpeta
-    $filesToDownload = @(
-        "Programas/UcmaRuntimeSetup.exe",
-        "Programas/vcredist_x64.exe", 
-        "Programas/rewrite_amd64.msi"
-    )
-    
-    foreach ($file in $filesToDownload) {
-        $filePath = Join-Path $destination $file
-        $fileDir = Split-Path $filePath -Parent
-        
-        # Crear directorio si no existe
-        if (-not (Test-Path $fileDir)) {
-            New-Item -ItemType Directory -Path $fileDir -Force | Out-Null
-        }
-        
-        # Construir URL de descarga (aproximación - puede necesitar ajustes)
-        $downloadUrl = $url -replace '\?e=.*$', "" + "/" + $file
-        Write-Host "Descargando: $file" -ForegroundColor Cyan
-        
-        try {
-            $webClient.DownloadFile($downloadUrl, $filePath)
-            Write-Host "  ✓ $file descargado correctamente" -ForegroundColor Green
-        }
-        catch {
-            Write-Host "  ⚠ No se pudo descargar $file : $($_.Exception.Message)" -ForegroundColor Yellow
-        }
-    }
-    
-    Write-Host "Descarga de archivos completada" -ForegroundColor Green
-}
-catch {
-    Write-Host "ERROR en la descarga: $($_.Exception.Message)" -ForegroundColor Red
-    Write-Host "Presiona Enter para salir..." -ForegroundColor Red
-    Read-Host
+# Verificar si el archivo se descargó correctamente
+if (Test-Path $zipFile) {
+    Write-Host "Descarga completada exitosamente" -ForegroundColor Green
+} else {
+    Write-Host "Error en la descarga" -ForegroundColor Red
     exit 1
 }
 
-# Verificar si los archivos esenciales se descargaron
-$essentialFiles = @(
-    "C:\TempProy1\Programas\UcmaRuntimeSetup.exe",
-    "C:\TempProy1\Programas\vcredist_x64.exe",
-    "C:\TempProy1\Programas\rewrite_amd64.msi"
-)
+# Verificar si .NET Framework 4.5 o superior está instalado para la descompresión
+$net45Installed = Get-ChildItem "HKLM:SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full\" | Get-ItemPropertyValue -Name Release | ForEach-Object { $_ -ge 378389 }
+$net48Installed = Get-ChildItem "HKLM:SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full\" | Get-ItemPropertyValue -Name Release | ForEach-Object { $_ -ge 528040 }
 
-$missingFiles = @()
-foreach ($file in $essentialFiles) {
-    if (-not (Test-Path $file)) {
-        $missingFiles += $file
-        Write-Host "ADVERTENCIA: Archivo no encontrado - $file" -ForegroundColor Yellow
-    }
+if (-not ($net45Installed -or $net48Installed)) {
+    Write-Host "Se requiere .NET Framework 4.5 o superior para descomprimir" -ForegroundColor Red
+    exit 1
 }
 
-if ($missingFiles.Count -gt 0) {
-    Write-Host "Algunos archivos esenciales no se descargaron correctamente." -ForegroundColor Yellow
-    Write-Host "Por favor, descarga manualmente la carpeta desde:" -ForegroundColor Yellow
-    Write-Host $url -ForegroundColor Cyan
-    Write-Host "Y colócala en C:\TempProy1" -ForegroundColor Yellow
-    Write-Host "Presiona Enter para continuar con la instalación de características..." -ForegroundColor Yellow
-    Read-Host
+# Descomprimir el archivo zip
+Write-Host "Descomprimiendo archivo..." -ForegroundColor Yellow
+try {
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    [System.IO.Compression.ZipFile]::ExtractToDirectory($zipFile, "C:\")
+    Write-Host "Descompresión completada exitosamente" -ForegroundColor Green
 }
-
-# Pausa después de descarga
-Write-Host "Descarga completada. Presiona Enter para continuar con las instalaciones..." -ForegroundColor Cyan
-Read-Host
+catch {
+    Write-Host "Error al descomprimir: $($_.Exception.Message)" -ForegroundColor Red
+    exit 1
+}
 
 # Cambiar al directorio TempProy1
 cd TempProy1
@@ -124,19 +77,15 @@ $features = @(
 foreach ($feature in $features) {
     try {
         Write-Host "Instalando: $feature" -ForegroundColor Cyan
-        $result = Install-WindowsFeature -Name $feature -ErrorAction Stop
-        if ($result.Success) {
-            Write-Host "  ✓ $feature instalado correctamente" -ForegroundColor Green
-        } else {
-            Write-Host "  ⚠ $feature puede que no se instaló completamente" -ForegroundColor Yellow
-        }
+        Install-WindowsFeature -Name $feature -ErrorAction Stop
+        Write-Host "  ✓ $feature instalado correctamente" -ForegroundColor Green
     }
     catch {
         Write-Host "  ✗ Error instalando $feature : $($_.Exception.Message)" -ForegroundColor Red
     }
 }
 
-# Instalar programas adicionales (si se descargaron)
+# Instalar programas adicionales
 Write-Host "Instalando programas adicionales..." -ForegroundColor Yellow
 
 $programs = @(
@@ -149,12 +98,8 @@ foreach ($program in $programs) {
     if (Test-Path $program.Path) {
         try {
             Write-Host "Instalando: $($program.Name)" -ForegroundColor Cyan
-            $process = Start-Process -FilePath $program.Path -ArgumentList $program.Args -Wait -NoNewWindow -PassThru
-            if ($process.ExitCode -eq 0) {
-                Write-Host "  ✓ $($program.Name) instalado correctamente" -ForegroundColor Green
-            } else {
-                Write-Host "  ⚠ $($program.Name) terminó con código de salida: $($process.ExitCode)" -ForegroundColor Yellow
-            }
+            Start-Process -FilePath $program.Path -ArgumentList $program.Args -Wait -NoNewWindow
+            Write-Host "  ✓ $($program.Name) instalado correctamente" -ForegroundColor Green
         }
         catch {
             Write-Host "  ✗ Error instalando $($program.Name) : $($_.Exception.Message)" -ForegroundColor Red
