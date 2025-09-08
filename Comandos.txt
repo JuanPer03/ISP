@@ -81,14 +81,6 @@ Get-ADForest | Select-Object Name, ForestMode
 # Si el nivel no es al menos Windows2012R2, elevarlo:
 Set-ADForestMode -Identity "emijua.local" -ForestMode Windows2012R2
 
-# Verificar Permisos de Usuario, debes estar logueado con una cuenta que sea miembro de:
-# - Schema Admins
-# - Enterprise Admins
-# - Domain Admins
-
-whoami /groups | findstr "Schema Admins"
-whoami /groups | findstr "Enterprise Admins"
-
 |-----------------------|
 | 𝓔𝓷𝓵𝓪𝓬𝓮𝓼 𝓭𝓮 𝓭𝓮𝓼𝓬𝓪𝓻𝓰𝓪 |
 |-----------------------|
